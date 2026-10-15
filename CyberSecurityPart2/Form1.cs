@@ -57,6 +57,12 @@ namespace CyberSecurityPart2
             key.keywordResponses["Social media, Facebook, Privacy"].Add("Don't post that you're on holiday while you're away - it tells criminals your home may be empty.");
             key.keywordResponses["Social media, Facebook, Privacy"].Add("Be careful of friend requests from people you don't know. Fake profiles are often used in scams.");
 
+            // GREETINGS - so the bot replies when the user says hi
+            key.keywordResponses["Hi, Hy, Hey, Hello, Howzit, Good morning, Good afternoon, Good evening, Greetings"] = new List<string>
+{  "Hello! It's great to chat with you. What would you like to learn about staying safe online?",
+            "Hi there! Ask me about passwords, phishing, scams, privacy or safe browsing.",
+            "Hey! I'm here to help you stay safe online. What's on your mind?"
+};
             // Safe browsing
             key.keywordResponses["Browsing, Browser, website"].Add("Keep your web browser updated so it has the latest security fixes.");
             key.keywordResponses["Browsing, Browser, website"].Add("Be careful on public Wi-Fi. Avoid logging into banking apps on open networks.");
@@ -116,56 +122,12 @@ namespace CyberSecurityPart2
         }
 
         // SEND BUTTON: takes what the user typed and shows the bot's reply
+        // SEND BUTTON: runs the same send code as pressing Enter
         private void button2_Click(object sender, EventArgs e)
         {
-            string input = ChatInput2.Text.Trim();   // get what the user typed
-            ChatInput2.Clear();                      // empty the typing box
-            ChatInput2.Focus();                      // put the cursor back in the typing box
-
-            // Input validation: don't allow empty messages
-            if (input == "")
-            {
-                AddToChat("GemBot", "Please type a message first.");
-                return;
-            }
-
-            // try/catch so the chatbot never crashes on unexpected input
-            try
-            {
-                // If we don't know the user's name yet, their first message is their name
-                if (!key.HasName())
-                {
-                    AddToChat("You", input);
-
-                    if (key.IsValidName(input))
-                    {
-                        key.SetUserName(input);
-                        AddToChat("GemBot", "Nice to meet you, " + key.GetUserName() +
-                            "! You can ask me about passwords, phishing, safe browsing, social media and privacy.");
-                    }
-                    else
-                    {
-                        AddToChat("GemBot", "Please enter a valid name using letters only.");
-                    }
-                    return;
-                }
-
-                // We know the name, so the ChatEngine decides the reply
-                AddToChat(key.GetUserName(), input);
-                AddToChat("GemBot", key.GetResponse(input));
-            }
-            catch (Exception)
-            {
-                AddToChat("GemBot", "Oops, something went wrong. Please try again.");
-            }
+            ChatInput_KeyDown(sender, new KeyEventArgs(Keys.Enter));
         }
 
-        // Adds one message to the big chat box (ChatInput) and scrolls down to it
-        private void AddToChat(string who, string message)
-        {
-            ChatInput.AppendText(who + ": " + message + Environment.NewLine + Environment.NewLine);
-            ChatInput.ScrollToCaret();
-        }
 
         private void pictureBox1_Click(object sender, EventArgs e)
         {
@@ -173,85 +135,31 @@ namespace CyberSecurityPart2
         }
 
         private void Form1_Load(object sender, EventArgs e)
+       
         {
-            StyleForm();
-            ShowAsciiArt();
-            
-            ChatInput.ReadOnly = true;
+            // ---------- COLOURS (dark purple theme to match the GemBot logo) ----------
+            Color background = Color.FromArgb(24, 20, 45);
+            Color chatBoxColour = Color.FromArgb(38, 33, 68);
+            Color accent = Color.FromArgb(214, 130, 220);
 
-            // Welcome the user and ask for their name straight away
-            AddToChat("GemBot", "Hello! Welcome to the Cybersecurity Awareness Assistant.");
-            AddToChat("GemBot", "Before we start, what is your name?");
-
-            // Put the cursor in the typing box so the user can type right away
-            ChatInput2.Focus();
-        }
-
-        private void ChatInput_KeyDown(object sender, KeyEventArgs e)
-        {
-
-        }
-
-        private void ChatInput_TextChanged(object sender, EventArgs e)
-        {
-            
-
-        }
-
-        private void ChatInput2_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void richTextBox1_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-        // Shows the ASCII art from Part 1 at the top of the window
-        private void ShowAsciiArt()
-        {
-            Label asciiLabel = new Label();
-
-        
-            asciiLabel.Text =
-        @"  ____                 ____        _
- / ___| ___ _ __ ___  | __ )  ___ | |_
-| |  _ / _ \ '_ ` _ \ |  _ \ / _ \| __|
-| |_| |  __/ | | | | || |_) | (_) | |_
- \____|\___|_| |_| |_||____/ \___/ \__|";
-
-            asciiLabel.Font = new Font("Consolas", 9);   // Consolas keeps all letters the same width, so the art lines up
-            asciiLabel.AutoSize = true;
-            asciiLabel.Location = new Point(ChatInput.Left, 20);   // line it up with the left side of the chat box
-
-            this.Controls.Add(asciiLabel);   // put the label on the form
-        }
-        // Gives the form colours, fonts and neat spacing 
-        private void StyleForm()
-        {
-            // ---- Colours (dark purple theme ) ----
-            Color background = Color.FromArgb(24, 20, 45);     // dark purple-navy
-            Color chatBoxColour = Color.FromArgb(38, 33, 68);  // slightly lighter for the chat box
-            Color accent = Color.FromArgb(214, 130, 220);      // pink-purple, like the logo
-
-            // ---- The window ----
             this.BackColor = background;
-            this.ForeColor = accent;        // labels (like the ASCII art) use this colour
+            this.ForeColor = accent;        // labels (like the ASCII art)
             this.AcceptButton = button2;    // pressing Enter clicks Send
 
-            // ---- Big chat box ----
+            // Big chat box: only for showing messages
+            ChatInput.ReadOnly = true;
             ChatInput.BackColor = chatBoxColour;
             ChatInput.ForeColor = Color.White;
             ChatInput.Font = new Font("Segoe UI", 10);
             ChatInput.BorderStyle = BorderStyle.None;
 
-            // ---- Typing box: same width as the chat box, leaving room for the button ----
+            // Typing box: same width as the chat box, leaving room for the button
             ChatInput2.Font = new Font("Segoe UI", 11);
             ChatInput2.Left = ChatInput.Left;
             ChatInput2.Top = ChatInput.Bottom + 15;
             ChatInput2.Width = ChatInput.Width - 110;
 
-            // ---- Send button: sits right next to the typing box ----
+            // Send button: right next to the typing box
             button2.Text = "Send";
             button2.BackColor = Color.FromArgb(150, 80, 190);
             button2.ForeColor = Color.White;
@@ -262,6 +170,125 @@ namespace CyberSecurityPart2
             button2.Height = ChatInput2.Height;
             button2.Left = ChatInput2.Right + 10;
             button2.Top = ChatInput2.Top;
+
+            // ---------- ASCII ART from Part 1 ----------
+            Label asciiLabel = new Label();
+            asciiLabel.Text =
+        @"  ____                 ____        _
+ / ___| ___ _ __ ___  | __ )  ___ | |_
+| |  _ / _ \ '_ ` _ \ |  _ \ / _ \| __|
+| |_| |  __/ | | | | || |_) | (_) | |_
+ \____|\___|_| |_| |_||____/ \___/ \__|";
+            asciiLabel.Font = new Font("Consolas", 9);   // same-width letters so the art lines up
+            asciiLabel.AutoSize = true;
+            asciiLabel.Location = new Point(ChatInput.Left, 20);
+            this.Controls.Add(asciiLabel);
+
+            // ---------- WELCOME MESSAGE ----------
+            ChatInput.AppendText("GemBot: Hello! Welcome to the Cybersecurity Awareness Assistant." + Environment.NewLine + Environment.NewLine);
+            ChatInput.AppendText("GemBot: Before we start, what is your name?" + Environment.NewLine + Environment.NewLine);
+
+            // Cursor in the typing box, and set the Send button's starting state
+            ChatInput2.Focus();
+            ChatInput2_TextChanged(this, EventArgs.Empty);
         }
+
+
+        // Sends the user's message and shows GemBot's reply.
+        // Runs when Enter is pressed, and also when the Send button is clicked.
+        private void ChatInput_KeyDown(object sender, KeyEventArgs e)
+        {
+            // Only react to the Enter key
+            if (e.KeyCode != Keys.Enter)
+            {
+                return;
+            }
+            e.SuppressKeyPress = true;   // stops the Windows "ding" sound
+
+            // Two new lines, used to leave a gap between messages
+            string gap = Environment.NewLine + Environment.NewLine;
+
+            string input = ChatInput2.Text.Trim();   // get what the user typed
+            ChatInput2.Clear();                      // empty the typing box
+            ChatInput2.Focus();                      // cursor back in the typing box
+
+            // Input validation: don't allow empty messages
+            if (input == "")
+            {
+                ChatInput.AppendText("GemBot: Please type a message first." + gap);
+                return;
+            }
+
+            // EXIT: if the user wants to leave, say goodbye and close the program
+            string lower = input.ToLower();
+            if (lower == "exit" || lower == "quit" || lower == "bye" || lower == "goodbye" || lower == "cancel")
+            {
+                ChatInput.AppendText("You: " + input + gap);
+                ChatInput.AppendText("GemBot: Goodbye! Stay safe online." + gap);
+
+                MessageBox.Show("Goodbye! Stay safe online.", "GemBot");   // gives the user time to read it
+                this.Close();                                             // closes the chatbot window
+                return;
+            }
+
+            // try/catch so the chatbot never crashes on unexpected input
+            try
+            {
+                // If we don't know the user's name yet, their first message is their name
+                if (!key.HasName())
+                {
+                    ChatInput.AppendText("You: " + input + gap);
+
+                    if (key.IsValidName(input))
+                    {
+                        key.SetUserName(input);
+                        ChatInput.AppendText("GemBot: Nice to meet you, " + key.GetUserName() +
+                            "! You can ask me about passwords, phishing, scams, safe browsing, social media and privacy." + gap);
+                    }
+                    else
+                    {
+                        ChatInput.AppendText("GemBot: Please enter a valid name using letters only." + gap);
+                    }
+                    return;
+                }
+
+               
+                ChatInput.AppendText(key.GetUserName() + ": " + input + gap);
+                ChatInput.AppendText("GemBot: " + key.GetResponse(input) + gap);
+            }
+            catch (Exception)
+            {
+                ChatInput.AppendText("GemBot: Oops, something went wrong. Please try again." + gap);
+            }
+        }
+
+        private void ChatInput_TextChanged(object sender, EventArgs e)
+        {
+            
+
+        }
+
+        private void ChatInput2_TextChanged(object sender, EventArgs e)
+        {
+         
+
+        
+            // Only allow sending when the user has typed something 
+            if (ChatInput2.Text.Trim() == "")
+            {
+                button2.Enabled = false;   // nothing typed - grey out the Send button
+            }
+            else
+            {
+                button2.Enabled = true;    // text typed - Send button can be clicked
+            }
+        }
+        
+
+        private void richTextBox1_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+        
+        
     }
-}
