@@ -9,13 +9,13 @@ namespace CyberSecurityPart2
     
     internal class ChatEngine
     {
-        // ==================== MEMORY (your original fields) ====================
+        // ==================== MEMORY  ====================
         private string userName = "";        // the user's name
         private string favouriteTopic = "";  // the word the user said they are interested in, e.g. "privacy"
         private string lastTopic = "";       // the dictionary key we are talking about right now
         private Random rng = new Random();   // used to pick random responses
 
-        // Remembers the dictionary key of the favourite topic (so we can personalise tips)
+        // Remembers the dictionary key of the favourite topic 
         private string favouriteKey = "";
 
         // Remembers the last reply, so we don't give the same tip twice in a row
@@ -24,7 +24,7 @@ namespace CyberSecurityPart2
        
         public Dictionary<string, List<string>> keywordResponses = new Dictionary<string, List<string>>();
 
-        // ==================== EXTRA LISTS FOR PART 2 ====================
+        // ==================== EXTRA LISTS  ====================
 
         private Dictionary<string, string> sentimentWords = new Dictionary<string, string>()
         {
@@ -207,8 +207,15 @@ namespace CyberSecurityPart2
             return reply;
         }
 
+        // Finds which dictionary key matches the user's text.
+        // Each key is split at the commas, so "Browsing, Browser, website" checks 3 words.
+        // matchedWord gives back the exact word that was found (e.g. "privacy").
         private string FindKey(string text, out string matchedWord)
         {
+            // Remove punctuation and put spaces around the text,
+            // so we can check for whole words like " hi "
+            string padded = " " + text.Replace("?", " ").Replace("!", " ").Replace(",", " ").Replace(".", " ") + " ";
+
             foreach (string key in keywordResponses.Keys)
             {
                 string[] words = key.Split(',');
@@ -216,8 +223,24 @@ namespace CyberSecurityPart2
                 foreach (string word in words)
                 {
                     string cleanWord = word.Trim().ToLower();
+                    if (cleanWord == "")
+                    {
+                        continue;
+                    }
 
-                    if (cleanWord != "" && text.Contains(cleanWord))
+                    bool found;
+                    if (cleanWord.Length <= 3)
+                    {
+                        // Short words (hi, hy, hey) must be a whole word, so "this" doesn't count as "hi"
+                        found = padded.Contains(" " + cleanWord + " ");
+                    }
+                    else
+                    {
+                        // Longer words can be part of a word, so "scams" still finds "scam"
+                        found = text.Contains(cleanWord);
+                    }
+
+                    if (found)
                     {
                         matchedWord = cleanWord;
                         return key;
