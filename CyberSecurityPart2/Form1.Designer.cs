@@ -59,12 +59,17 @@
             txtTaskTitle = new TextBox();
             lblTaskTitle = new Label();
             tabLog = new TabPage();
+            btnShowMore = new Button();
+            lstLog = new ListBox();
+            lblLogTitle = new Label();
+            btnShowRecent = new Button();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             tabControl2.SuspendLayout();
             tabChat.SuspendLayout();
             tabQuiz.SuspendLayout();
             tabTask.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvTasks).BeginInit();
+            tabLog.SuspendLayout();
             SuspendLayout();
             // 
             // button1
@@ -415,12 +420,63 @@
             // 
             // tabLog
             // 
+            tabLog.BackColor = Color.FromArgb(24, 20, 45);
+            tabLog.Controls.Add(btnShowRecent);
+            tabLog.Controls.Add(btnShowMore);
+            tabLog.Controls.Add(lstLog);
+            tabLog.Controls.Add(lblLogTitle);
+            tabLog.ForeColor = Color.White;
             tabLog.Location = new Point(4, 24);
             tabLog.Name = "tabLog";
             tabLog.Size = new Size(792, 422);
             tabLog.TabIndex = 3;
             tabLog.Text = "Activity Log";
-            tabLog.UseVisualStyleBackColor = true;
+            tabLog.Enter += tabLog_Enter;
+            // 
+            // btnShowMore
+            // 
+            btnShowMore.BackColor = Color.FromArgb(150, 80, 190);
+            btnShowMore.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnShowMore.Location = new Point(20, 315);
+            btnShowMore.Name = "btnShowMore";
+            btnShowMore.Size = new Size(150, 35);
+            btnShowMore.TabIndex = 2;
+            btnShowMore.Text = "Show More";
+            btnShowMore.UseVisualStyleBackColor = false;
+            btnShowMore.Click += btnShowMore_Click;
+            // 
+            // lstLog
+            // 
+            lstLog.BackColor = Color.FromArgb(38, 33, 68);
+            lstLog.ForeColor = Color.White;
+            lstLog.FormattingEnabled = true;
+            lstLog.ItemHeight = 15;
+            lstLog.Location = new Point(20, 50);
+            lstLog.Name = "lstLog";
+            lstLog.Size = new Size(740, 244);
+            lstLog.TabIndex = 1;
+            // 
+            // lblLogTitle
+            // 
+            lblLogTitle.AutoSize = true;
+            lblLogTitle.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            lblLogTitle.Location = new Point(20, 20);
+            lblLogTitle.Name = "lblLogTitle";
+            lblLogTitle.Size = new Size(91, 15);
+            lblLogTitle.TabIndex = 0;
+            lblLogTitle.Text = "Recent Actions";
+            // 
+            // btnShowRecent
+            // 
+            btnShowRecent.BackColor = Color.FromArgb(150, 80, 190);
+            btnShowRecent.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnShowRecent.Location = new Point(190, 315);
+            btnShowRecent.Name = "btnShowRecent";
+            btnShowRecent.Size = new Size(150, 35);
+            btnShowRecent.TabIndex = 3;
+            btnShowRecent.Text = "Show Recent";
+            btnShowRecent.UseVisualStyleBackColor = false;
+            btnShowRecent.Click += btnShowRecent_Click;
             // 
             // Form1
             // 
@@ -441,6 +497,8 @@
             tabTask.ResumeLayout(false);
             tabTask.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)dgvTasks).EndInit();
+            tabLog.ResumeLayout(false);
+            tabLog.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -477,5 +535,9 @@
         private Button btnSubmitAnswer;
         private Button btnNextQuestion;
         private Label lblFeedback;
+        private Label lblLogTitle;
+        private ListBox lstLog;
+        private Button btnShowMore;
+        private Button btnShowRecent;
     }
 }

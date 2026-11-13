@@ -932,7 +932,49 @@ namespace CyberSecurityPart2
             answered = false;
             btnSubmitAnswer.Enabled = true;
         }
+        // Runs every time the user opens the Activity Log tab - shows the recent actions
+        private void tabLog_Enter(object sender, EventArgs e)
+        {
+            btnShowRecent_Click(sender, e);
+        }
 
-        
+        // SHOW RECENT button - only the last 5 actions, to keep it short
+        private void btnShowRecent_Click(object sender, EventArgs e)
+        {
+            lstLog.Items.Clear();
+            lblLogTitle.Text = "Recent actions (last 5)";
+
+            List<string> recent = log.GetRecent(5);
+            if (recent.Count == 0)
+            {
+                lstLog.Items.Add("No actions yet - try adding a task or playing the quiz.");
+                return;
+            }
+
+            for (int i = 0; i < recent.Count; i++)
+            {
+                lstLog.Items.Add((i + 1) + ". " + recent[i]);
+            }
+        }
+
+        // SHOW MORE button - the full history
+        private void btnShowMore_Click(object sender, EventArgs e)
+        {
+            lstLog.Items.Clear();
+
+            List<string> all = log.GetAll();
+            lblLogTitle.Text = "Full history (" + all.Count + " actions)";
+
+            if (all.Count == 0)
+            {
+                lstLog.Items.Add("No actions yet - try adding a task or playing the quiz.");
+                return;
+            }
+
+            for (int i = 0; i < all.Count; i++)
+            {
+                lstLog.Items.Add((i + 1) + ". " + all[i]);
+            }
+        }
     }
 }
