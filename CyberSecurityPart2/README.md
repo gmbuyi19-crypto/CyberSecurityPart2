@@ -6,9 +6,9 @@ GemBot is a Windows Forms (C#) chatbot that helps South African citizens learn h
 - **Part 2** – a graphical user interface (GUI) with keyword recognition, random responses, conversation flow, memory and sentiment detection.
 - **Part 3 (POE)** – a Task Assistant with reminders stored in a database, a cybersecurity quiz, NLP simulation and an activity log.
 
-**Student name:** _[your name]_
-**Student number:** _[your student number]_
-**Video presentation (YouTube, unlisted):** _[paste your link here]_
+**Student name:** Gemima Tshimanga
+**Student number:** ST10499217
+
 
 ---
 
