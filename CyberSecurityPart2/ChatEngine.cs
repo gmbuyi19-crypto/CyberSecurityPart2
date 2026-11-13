@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,26 +6,32 @@ using System.Threading.Tasks;
 
 namespace CyberSecurityPart2
 {
-    
+    /// <summary>
+    /// ChatEngine is the "brain" of the chatbot.
+    /// Form1 fills keywordResponses, and this class decides what to reply:
+    /// keywords, random tips, follow-ups, memory and sentiment.
+    /// </summary>
     internal class ChatEngine
     {
-        // ==================== MEMORY  ====================
+        // ==================== MEMORY (your original fields) ====================
         private string userName = "";        // the user's name
         private string favouriteTopic = "";  // the word the user said they are interested in, e.g. "privacy"
         private string lastTopic = "";       // the dictionary key we are talking about right now
         private Random rng = new Random();   // used to pick random responses
 
-        // Remembers the dictionary key of the favourite topic 
+        // Remembers the dictionary key of the favourite topic (so we can personalise tips)
         private string favouriteKey = "";
 
         // Remembers the last reply, so we don't give the same tip twice in a row
         private string lastResponse = "";
 
-       
+        // Your dictionary: keyword(s) -> list of responses.
+        // A key can hold several keywords separated by commas, e.g. "Browsing, Browser, website"
         public Dictionary<string, List<string>> keywordResponses = new Dictionary<string, List<string>>();
 
-        // ==================== EXTRA LISTS  ====================
+        // ==================== EXTRA LISTS FOR PART 2 ====================
 
+        // Mood word -> mood name (sentiment detection)
         private Dictionary<string, string> sentimentWords = new Dictionary<string, string>()
         {
             { "worried", "worried" }, { "scared", "worried" }, { "afraid", "worried" }, { "nervous", "worried" },
@@ -94,7 +100,10 @@ namespace CyberSecurityPart2
         }
 
         // ==================== MAIN METHOD ====================
-        
+        /// <summary>
+        /// Takes what the user typed and returns the bot's reply.
+        /// The checks run in order - the first one that matches gives the answer.
+        /// </summary>
         public string GetResponse(string input)
         {
             // ---- 1. Empty input ----
@@ -111,7 +120,7 @@ namespace CyberSecurityPart2
             string key = FindKey(text, out matchedWord);
             string mood = FindMood(text);
 
-            // ---- MEMORY: user tells us their favourite topic ----
+            // ---- 2. MEMORY: user tells us their favourite topic ----
             // e.g. "I'm interested in privacy"
             if (text.Contains("interested in") && key != "")
             {
@@ -121,7 +130,7 @@ namespace CyberSecurityPart2
                        ". It's a crucial part of staying safe online. " + GetRandomResponse(key);
             }
 
-            // ----  MEMORY: user asks what we remember ----
+            // ---- 3. MEMORY: user asks what we remember ----
             if (text.Contains("what is my name") || text.Contains("what's my name"))
             {
                 return "Your name is " + userName + "!";
@@ -135,7 +144,7 @@ namespace CyberSecurityPart2
                 return "You told me you're interested in " + favouriteTopic + ".";
             }
 
-            // ----SENTIMENT: user shows a mood ----
+            // ---- 4. SENTIMENT: user shows a mood ----
             if (mood != "")
             {
                 // Pick a topic for the tip: this message -> current topic -> favourite -> any topic
@@ -144,18 +153,17 @@ namespace CyberSecurityPart2
                 if (tipKey == "") tipKey = favouriteKey;
                 if (tipKey == "") tipKey = GetAnyKey();
 
-                
-                
+                // Thank the user by name, then show empathy, then give a tip straight away
                 return "Thank you for sharing, " + userName + ". " + sentimentReplies[mood] + " " + GetRandomResponse(tipKey);
             }
 
-            // ----  KEYWORD RECOGNITION ----
+            // ---- 5. KEYWORD RECOGNITION ----
             if (key != "")
             {
                 return GetRandomResponse(key);
             }
 
-            // ----  CONVERSATION FLOW: user is confused ----
+            // ---- 6. CONVERSATION FLOW: user is confused ----
             if (ContainsAny(text, confusedPhrases))
             {
                 if (lastTopic != "")
@@ -165,7 +173,7 @@ namespace CyberSecurityPart2
                 return "No problem! Which topic should I explain? Try passwords, phishing or privacy.";
             }
 
-            // ---- CONVERSATION FLOW: "tell me more", "another tip" ----
+            // ---- 7. CONVERSATION FLOW: "tell me more", "another tip" ----
             if (ContainsAny(text, followUpPhrases))
             {
                 if (lastTopic != "")
@@ -175,7 +183,7 @@ namespace CyberSecurityPart2
                 return "We haven't picked a topic yet. Try asking about passwords, phishing or privacy.";
             }
 
-            // ---- ERROR HANDLING: nothing matched ----
+            // ---- 8. ERROR HANDLING: nothing matched ----
             return "I'm not sure I understand. Can you try rephrasing?";
         }
 
@@ -187,7 +195,7 @@ namespace CyberSecurityPart2
             List<string> responses = keywordResponses[key];
             string reply = responses[rng.Next(responses.Count)];
 
-            // If there is more than one response
+            // If there is more than one response, try not to repeat the last one
             if (responses.Count > 1)
             {
                 while (reply == lastResponse)
