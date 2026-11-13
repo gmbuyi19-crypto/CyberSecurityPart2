@@ -23,6 +23,11 @@ namespace CyberSecurityPart2
         ActivityLogger log = new ActivityLogger();       // records everything the bot does
         int waitingForReminderTaskId = -1;                // a task waiting for "yes, remind me in..." (-1 = none)
         string waitingForReminderTitle = "";
+        QuizService quiz = new QuizService();   // holds the quiz questions
+        int currentQuestion = -1;               // which question we are on (-1 = not started)
+        int quizScore = 0;                      // number of correct answers
+        bool answered = true;                   // has the current question been answered?
+
         public Form1()
         {
             InitializeComponent();
@@ -230,8 +235,8 @@ namespace CyberSecurityPart2
             string lower = input.ToLower();
             if (lower == "exit" || lower == "quit" || lower == "bye" || lower == "goodbye" || lower == "cancel")
             {
-                        // Show what the user typed
-        ChatInput.AppendText(key.GetUserName() + ": " + input + gap);
+                // Show what the user typed
+                ChatInput.AppendText(key.GetUserName() + ": " + input + gap);
 
                 // ---------- 1. Answer to "Would you like a reminder?" ----------
                 // If the user asks for a NEW task or reminder, stop waiting for the old one
@@ -244,175 +249,175 @@ namespace CyberSecurityPart2
 
                 if (waitingForReminderTaskId != -1)
                 {
-            int taskId = waitingForReminderTaskId;
-            string taskTitle = waitingForReminderTitle;
-            waitingForReminderTaskId = -1;   // stop waiting
+                    int taskId = waitingForReminderTaskId;
+                    string taskTitle = waitingForReminderTitle;
+                    waitingForReminderTaskId = -1;   // stop waiting
 
-            DateTime? answerDate = ReminderParser.GetReminderDate(input);
+                    DateTime? answerDate = ReminderParser.GetReminderDate(input);
 
-            if (NlpServices.IsYes(input) || answerDate != null)
-            {
-                // User said yes but no time, so ask when
-                if (answerDate == null)
+                    if (NlpServices.IsYes(input) || answerDate != null)
+                    {
+                        // User said yes but no time, so ask when
+                        if (answerDate == null)
+                        {
+                            ChatInput.AppendText("GemBot: When should I remind you? You can say \"in 3 days\" or \"tomorrow\"." + gap);
+                            waitingForReminderTaskId = taskId;   // keep waiting
+                            return;
+                        }
+
+                        taskRepo.SetReminder(taskId, answerDate.Value);
+                        ChatInput.AppendText("GemBot: Got it! I'll remind you about '" + taskTitle + "' on " + answerDate.Value.ToString("dd MMM yyyy") + "." + gap);
+                        log.Add("Reminder set: '" + taskTitle + "' on " + answerDate.Value.ToString("dd MMM yyyy"));
+                        return;
+                    }
+
+                    if (input.ToLower().StartsWith("no"))
+                    {
+                        ChatInput.AppendText("GemBot: No problem, I won't set a reminder for '" + taskTitle + "'." + gap);
+                        return;
+                    }
+                }
+
+                // ---------- 2. Reminders, e.g. "Remind me to update my password tomorrow" ----------
+                if (NlpServices.IsReminder(input))
                 {
-                    ChatInput.AppendText("GemBot: When should I remind you? You can say \"in 3 days\" or \"tomorrow\"." + gap);
-                    waitingForReminderTaskId = taskId;   // keep waiting
+                    string title = NlpServices.GetTaskTitle(input);
+                    if (title == "")
+                    {
+                        ChatInput.AppendText("GemBot: What should I remind you about? For example: \"Remind me to update my password tomorrow\"." + gap);
+                        return;
+                    }
+
+                    DateTime? date = ReminderParser.GetReminderDate(input);
+                    int newId = taskRepo.AddTask(title, NlpServices.GetDescription(title), date);
+
+                    if (date != null)
+                    {
+                        ChatInput.AppendText("GemBot: Reminder set for '" + title + "' on " + date.Value.ToString("dd MMM yyyy") + "." + gap);
+                        log.Add("Reminder set: '" + title + "' on " + date.Value.ToString("dd MMM yyyy"));
+                    }
+                    else
+                    {
+                        ChatInput.AppendText("GemBot: I've added '" + title + "'. When should I remind you? (e.g. \"in 3 days\")" + gap);
+                        log.Add("Task added: '" + title + "' (no reminder set yet)");
+                        waitingForReminderTaskId = newId;
+                        waitingForReminderTitle = title;
+                    }
                     return;
                 }
 
-                taskRepo.SetReminder(taskId, answerDate.Value);
-                ChatInput.AppendText("GemBot: Got it! I'll remind you about '" + taskTitle + "' on " + answerDate.Value.ToString("dd MMM yyyy") + "." + gap);
-                log.Add("Reminder set: '" + taskTitle + "' on " + answerDate.Value.ToString("dd MMM yyyy"));
-                return;
-            }
+                // ---------- 3. Adding a task, e.g. "Add task - Review privacy settings" ----------
+                if (NlpServices.IsAddTask(input))
+                {
+                    string title = NlpServices.GetTaskTitle(input);
+                    if (title == "")
+                    {
+                        ChatInput.AppendText("GemBot: What is the task? For example: \"Add task - Review privacy settings\"." + gap);
+                        return;
+                    }
 
-            if (input.ToLower().StartsWith("no"))
-            {
-                ChatInput.AppendText("GemBot: No problem, I won't set a reminder for '" + taskTitle + "'." + gap);
-                return;
-            }
-        }
+                    string description = NlpServices.GetDescription(title);
+                    DateTime? date = ReminderParser.GetReminderDate(input);
+                    int newId = taskRepo.AddTask(title, description, date);
 
-        // ---------- 2. Reminders, e.g. "Remind me to update my password tomorrow" ----------
-        if (NlpServices.IsReminder(input))
-        {
-            string title = NlpServices.GetTaskTitle(input);
-            if (title == "")
-            {
-                ChatInput.AppendText("GemBot: What should I remind you about? For example: \"Remind me to update my password tomorrow\"." + gap);
-                return;
-            }
+                    if (date != null)
+                    {
+                        ChatInput.AppendText("GemBot: Task added: '" + title + "' with a reminder on " + date.Value.ToString("dd MMM yyyy") + "." + gap);
+                        log.Add("Task added: '" + title + "' (reminder on " + date.Value.ToString("dd MMM yyyy") + ")");
+                    }
+                    else
+                    {
+                        ChatInput.AppendText("GemBot: Task added with the description \"" + description + "\" Would you like a reminder?" + gap);
+                        log.Add("Task added: '" + title + "' (no reminder set)");
+                        waitingForReminderTaskId = newId;
+                        waitingForReminderTitle = title;
+                    }
+                    return;
+                }
 
-            DateTime? date = ReminderParser.GetReminderDate(input);
-            int newId = taskRepo.AddTask(title, NlpServices.GetDescription(title), date);
+                // ---------- 4. Show tasks ----------
+                if (NlpServices.IsShowTasks(input))
+                {
+                    List<TaskItems> tasks = taskRepo.GetAllTasks();
+                    if (tasks.Count == 0)
+                    {
+                        ChatInput.AppendText("GemBot: You don't have any tasks yet. Try \"Add task - Enable 2FA\"." + gap);
+                        return;
+                    }
 
-            if (date != null)
-            {
-                ChatInput.AppendText("GemBot: Reminder set for '" + title + "' on " + date.Value.ToString("dd MMM yyyy") + "." + gap);
-                log.Add("Reminder set: '" + title + "' on " + date.Value.ToString("dd MMM yyyy"));
-            }
-            else
-            {
-                ChatInput.AppendText("GemBot: I've added '" + title + "'. When should I remind you? (e.g. \"in 3 days\")" + gap);
-                log.Add("Task added: '" + title + "' (no reminder set yet)");
-                waitingForReminderTaskId = newId;
-                waitingForReminderTitle = title;
-            }
-            return;
-        }
+                    string list = "GemBot: Here are your tasks:" + Environment.NewLine;
+                    int number = 1;
+                    foreach (TaskItems task in tasks)
+                    {
+                        string status = task.IsCompleted ? "done" : "not done";
+                        string reminder = task.ReminderDate == null ? "no reminder" : "reminder " + task.ReminderDate.Value.ToString("dd MMM yyyy");
+                        list += "  " + number + ". " + task.Title + " (" + status + ", " + reminder + ")" + Environment.NewLine;
+                        number++;
+                    }
+                    ChatInput.AppendText(list + Environment.NewLine);
+                    return;
+                }
 
-        // ---------- 3. Adding a task, e.g. "Add task - Review privacy settings" ----------
-        if (NlpServices.IsAddTask(input))
-        {
-            string title = NlpServices.GetTaskTitle(input);
-            if (title == "")
-            {
-                ChatInput.AppendText("GemBot: What is the task? For example: \"Add task - Review privacy settings\"." + gap);
-                return;
-            }
+                // ---------- 5. Quiz ----------
+                if (NlpServices.IsQuiz(input))
+                {
+                    ChatInput.AppendText("GemBot: Let's test your cybersecurity knowledge! Opening the Quiz tab for you..." + gap);
+                    log.Add("Quiz opened from the chat");
+                    tabControl2.SelectedTab = tabQuiz;
+                    return;
+                }
 
-            string description = NlpServices.GetDescription(title);
-            DateTime? date = ReminderParser.GetReminderDate(input);
-            int newId = taskRepo.AddTask(title, description, date);
+                // ---------- 6. Full activity log ("show more") ----------
+                if (NlpServices.IsShowMore(input))
+                {
+                    List<string> all = log.GetAll();
+                    if (all.Count == 0)
+                    {
+                        ChatInput.AppendText("GemBot: I haven't done anything yet." + gap);
+                        return;
+                    }
 
-            if (date != null)
-            {
-                ChatInput.AppendText("GemBot: Task added: '" + title + "' with a reminder on " + date.Value.ToString("dd MMM yyyy") + "." + gap);
-                log.Add("Task added: '" + title + "' (reminder on " + date.Value.ToString("dd MMM yyyy") + ")");
-            }
-            else
-            {
-                ChatInput.AppendText("GemBot: Task added with the description \"" + description + "\" Would you like a reminder?" + gap);
-                log.Add("Task added: '" + title + "' (no reminder set)");
-                waitingForReminderTaskId = newId;
-                waitingForReminderTitle = title;
-            }
-            return;
-        }
+                    string text = "GemBot: Here is the full history:" + Environment.NewLine;
+                    for (int i = 0; i < all.Count; i++)
+                    {
+                        text += "  " + (i + 1) + ". " + all[i] + Environment.NewLine;
+                    }
+                    ChatInput.AppendText(text + Environment.NewLine);
+                    return;
+                }
 
-        // ---------- 4. Show tasks ----------
-        if (NlpServices.IsShowTasks(input))
-        {
-            List<TaskItems> tasks = taskRepo.GetAllTasks();
-            if (tasks.Count == 0)
-            {
-                ChatInput.AppendText("GemBot: You don't have any tasks yet. Try \"Add task - Enable 2FA\"." + gap);
-                return;
-            }
+                // ---------- 7. Recent activity log (last 5 actions) ----------
+                if (NlpServices.IsShowLog(input))
+                {
+                    List<string> recent = log.GetRecent(5);
+                    if (recent.Count == 0)
+                    {
+                        ChatInput.AppendText("GemBot: I haven't done anything yet." + gap);
+                        return;
+                    }
 
-            string list = "GemBot: Here are your tasks:" + Environment.NewLine;
-            int number = 1;
-            foreach (TaskItems task in tasks)
-            {
-                string status = task.IsCompleted ? "done" : "not done";
-                string reminder = task.ReminderDate == null ? "no reminder" : "reminder " + task.ReminderDate.Value.ToString("dd MMM yyyy");
-                list += "  " + number + ". " + task.Title + " (" + status + ", " + reminder + ")" + Environment.NewLine;
-                number++;
-            }
-            ChatInput.AppendText(list + Environment.NewLine);
-            return;
-        }
+                    string text = "GemBot: Here's a summary of recent actions:" + Environment.NewLine;
+                    for (int i = 0; i < recent.Count; i++)
+                    {
+                        text += "  " + (i + 1) + ". " + recent[i] + Environment.NewLine;
+                    }
+                    if (log.GetAll().Count > recent.Count)
+                    {
+                        text += "  Type \"show more\" to see the full history." + Environment.NewLine;
+                    }
+                    ChatInput.AppendText(text + Environment.NewLine);
+                    return;
+                }
 
-        // ---------- 5. Quiz ----------
-        if (NlpServices.IsQuiz(input))
-        {
-            ChatInput.AppendText("GemBot: Let's test your cybersecurity knowledge! Opening the Quiz tab for you..." + gap);
-            log.Add("Quiz opened from the chat");
-            tabControl2.SelectedTab = tabQuiz;
-            return;
-        }
+                // ---------- 8. Everything else ----------
+                string reply = key.GetResponse(input);
+                ChatInput.AppendText("GemBot: " + reply + gap);
 
-        // ---------- 6. Full activity log ("show more") ----------
-        if (NlpServices.IsShowMore(input))
-        {
-            List<string> all = log.GetAll();
-            if (all.Count == 0)
-            {
-                ChatInput.AppendText("GemBot: I haven't done anything yet." + gap);
-                return;
-            }
-
-            string text = "GemBot: Here is the full history:" + Environment.NewLine;
-            for (int i = 0; i < all.Count; i++)
-            {
-                text += "  " + (i + 1) + ". " + all[i] + Environment.NewLine;
-            }
-            ChatInput.AppendText(text + Environment.NewLine);
-            return;
-        }
-
-        // ---------- 7. Recent activity log (last 5 actions) ----------
-        if (NlpServices.IsShowLog(input))
-        {
-            List<string> recent = log.GetRecent(5);
-            if (recent.Count == 0)
-            {
-                ChatInput.AppendText("GemBot: I haven't done anything yet." + gap);
-                return;
-            }
-
-            string text = "GemBot: Here's a summary of recent actions:" + Environment.NewLine;
-            for (int i = 0; i < recent.Count; i++)
-            {
-                text += "  " + (i + 1) + ". " + recent[i] + Environment.NewLine;
-            }
-            if (log.GetAll().Count > recent.Count)
-            {
-                text += "  Type \"show more\" to see the full history." + Environment.NewLine;
-            }
-            ChatInput.AppendText(text + Environment.NewLine);
-            return;
-        }
-
-        // ---------- 8. Everything else ----------
-        string reply = key.GetResponse(input);
-        ChatInput.AppendText("GemBot: " + reply + gap);
-
-        // Log the advice it gave (but not when it didn't understand)
-        if (!reply.StartsWith("I'm not sure"))
-        {
-            log.Add("Gave cybersecurity advice for: '" + input + "'");
-        }
+                // Log the advice it gave (but not when it didn't understand)
+                if (!reply.StartsWith("I'm not sure"))
+                {
+                    log.Add("Gave cybersecurity advice for: '" + input + "'");
+                }
 
                 MessageBox.Show("Goodbye! Stay safe online.", "GemBot");   // gives the user time to read it
                 this.Close();                                             // closes the chatbot window
@@ -444,7 +449,7 @@ namespace CyberSecurityPart2
                     }
                     return;
                 }
-            
+
 
 
                 // Show what the user typed
@@ -700,7 +705,7 @@ namespace CyberSecurityPart2
             if (title == "")
             {
                 MessageBox.Show("Please enter a task title.", "Task Assistant");
-               
+
                 return;
             }
 
@@ -749,7 +754,7 @@ namespace CyberSecurityPart2
             if (dgvTasks.CurrentRow == null)
             {
                 MessageBox.Show("Please select a task first.", "Task Assistant");
-              
+
                 return;
             }
 
@@ -780,7 +785,7 @@ namespace CyberSecurityPart2
             if (dgvTasks.CurrentRow == null)
             {
                 MessageBox.Show("Please select a task first.", "Task Assistant");
-             
+
                 return;
             }
 
@@ -804,5 +809,130 @@ namespace CyberSecurityPart2
                 MessageBox.Show("Could not delete the task.\n" + ex.Message, "Database error");
             }
         }
+
+        // START QUIZ button - resets everything and shows the first question
+        private void btnStartQuiz_Click(object sender, EventArgs e)
+        {
+            quizScore = 0;
+            currentQuestion = -1;
+            answered = true;
+
+            lblScore.Text = "Score: 0";
+            lblFeedback.Text = "";
+            btnStartQuiz.Text = "Restart Quiz";
+            btnNextQuestion.Enabled = true;
+
+            log.Add("Quiz started");
+
+            btnNextQuestion_Click(sender, e);   // show question 1
+        }
+
+        // SUBMIT ANSWER button - checks the answer and gives feedback straight away
+        private void btnSubmitAnswer_Click(object sender, EventArgs e)
+        {
+            // Find out which option the user picked (-1 = nothing picked)
+            int chosen = -1;
+            if (rdoOption1.Checked) chosen = 0;
+            if (rdoOption2.Checked) chosen = 1;
+            if (rdoOption3.Checked) chosen = 2;
+            if (rdoOption4.Checked) chosen = 3;
+
+            if (chosen == -1)
+            {
+                lblFeedback.ForeColor = Color.White;
+                lblFeedback.Text = "Please choose an answer first.";
+                return;
+            }
+
+            QuizService.Question q = quiz.GetQuestion(currentQuestion);
+            bool correct = (chosen == q.CorrectIndex);
+
+            if (correct)
+            {
+                quizScore++;
+                lblFeedback.ForeColor = Color.LightGreen;
+                lblFeedback.Text = quiz.GetFeedback(true) + " " + q.Explanation;
+            }
+            else
+            {
+                lblFeedback.ForeColor = Color.LightCoral;
+                lblFeedback.Text = quiz.GetFeedback(false) + " The right answer is: " +
+                                   q.Options[q.CorrectIndex] + ". " + q.Explanation;
+            }
+
+            lblScore.Text = "Score: " + quizScore;
+            answered = true;
+            btnSubmitAnswer.Enabled = false;   // one answer per question
+        }
+
+        // NEXT QUESTION button - shows the next question, or the final score at the end
+        private void btnNextQuestion_Click(object sender, EventArgs e)
+        {
+            // The user must answer before moving on
+            if (!answered)
+            {
+                lblFeedback.ForeColor = Color.White;
+                lblFeedback.Text = "Please answer this question first.";
+                return;
+            }
+
+            currentQuestion++;
+
+            // ----- End of the quiz -----
+            if (currentQuestion >= quiz.Count())
+            {
+                lblQuestionNumber.Text = "Quiz complete!";
+                lblQuestion.Text = "You scored " + quizScore + " out of " + quiz.Count() + ".";
+                lblFeedback.ForeColor = Color.White;
+                lblFeedback.Text = quiz.GetFinalMessage(quizScore);
+
+                rdoOption1.Visible = false;
+                rdoOption2.Visible = false;
+                rdoOption3.Visible = false;
+                rdoOption4.Visible = false;
+                btnSubmitAnswer.Enabled = false;
+                btnNextQuestion.Enabled = false;
+                btnStartQuiz.Text = "Play Again";
+
+                log.Add("Quiz completed - score " + quizScore + "/" + quiz.Count());
+                return;
+            }
+
+            // ----- Show the next question -----
+            QuizService.Question q = quiz.GetQuestion(currentQuestion);
+            lblQuestionNumber.Text = "Question " + (currentQuestion + 1) + " of " + quiz.Count();
+            lblQuestion.Text = q.Text;
+
+            rdoOption1.Text = q.Options[0];
+            rdoOption2.Text = q.Options[1];
+            rdoOption1.Visible = true;
+            rdoOption2.Visible = true;
+
+            // True/false questions only have 2 options, so hide the last two
+            if (q.Options.Length == 4)
+            {
+                rdoOption3.Text = q.Options[2];
+                rdoOption4.Text = q.Options[3];
+                rdoOption3.Visible = true;
+                rdoOption4.Visible = true;
+            }
+            else
+            {
+                rdoOption3.Visible = false;
+                rdoOption4.Visible = false;
+            }
+
+            // Clear the previous answer
+            rdoOption1.Checked = false;
+            rdoOption2.Checked = false;
+            rdoOption3.Checked = false;
+            rdoOption4.Checked = false;
+
+            lblFeedback.Text = "";
+            answered = false;
+            btnSubmitAnswer.Enabled = true;
+        }
+
+        
     }
 }
