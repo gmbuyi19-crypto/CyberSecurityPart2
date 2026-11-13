@@ -1,0 +1,28 @@
+name: Build GemBot
+
+# Run the check every time code is pushed to master
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    # Windows Forms apps must be built on Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Install .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore NuGet packages
+        run: dotnet restore CyberSecurityPart2.sln
+
+      - name: Build the project
+        run: dotnet build CyberSecurityPart2.sln --no-restore --configuration Release
